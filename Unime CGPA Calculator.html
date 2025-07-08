@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unime CGPA Calculator</title>
+    <!-- Tailwind CSS CDN for easy styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for a modern look */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Basic animation for results and messages */
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fadeInScale {
+            animation: fadeInScale 0.3s ease-out forwards;
+        }
+        /* Hide sections by default, show based on active tab */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-500 to-purple-600 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-2xl max-w-2xl w-full text-center">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-6">
+            🎓 Unime CGPA Calculator
+        </h1>
+
+        <p class="text-gray-600 mb-6 text-base sm:text-lg">
+            Choose a calculation mode below.
+        </p>
+
+        <!-- Navigation Tabs -->
+        <div class="flex justify-center mb-6 space-x-2 sm:space-x-4">
+            <button id="tab1Btn" class="tab-btn bg-indigo-600 text-white py-2 px-3 sm:px-6 rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 font-semibold text-sm sm:text-base transition-colors duration-200">
+                Calculate from Courses
+            </button>
+            <button id="tab2Btn" class="tab-btn bg-gray-200 text-gray-700 py-2 px-3 sm:px-6 rounded-lg shadow-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 font-semibold text-sm sm:text-base transition-colors duration-200">
+                Convert Avg. Score
+            </button>
+        </div>
+
+        <!-- Tab Content 1: Calculate Overall CGPA from Courses -->
+        <div id="tab1Content" class="tab-content active bg-gray-50 p-4 sm:p-6 rounded-lg shadow-inner mb-6">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Calculate Overall CGPA from Courses</h2>
+            <p class="text-gray-600 mb-4">Select subjects and enter your marks (out of 30).</p>
+
+            <div id="subjectInputsContainer" class="space-y-4 mb-4 text-left">
+                <!-- Subject input rows will be dynamically added here -->
+            </div>
+
+            <button id="addSubjectRowBtn" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 font-bold text-lg uppercase tracking-wider transform hover:-translate-y-0.5 transition-all duration-200 mb-4">
+                ➕ Add Subject
+            </button>
+
+            <button id="calculateFromCoursesBtn" class="w-full bg-indigo-700 text-white py-3 px-6 rounded-lg shadow-md hover:bg-indigo-800 focus:outline-none focus:ring-4 focus:ring-indigo-300 font-bold text-lg uppercase tracking-wider transform hover:-translate-y-0.5 transition-all duration-200">
+                📊 Calculate
+            </button>
+
+            <div id="coursesCgpaResult" class="mt-6 p-4 bg-indigo-100 text-indigo-800 rounded-lg text-xl sm:text-2xl font-semibold hidden animate-fadeInScale">
+                <!-- Result will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Tab Content 2: Convert Average Score to CGPA -->
+        <div id="tab2Content" class="tab-content bg-gray-50 p-4 sm:p-6 rounded-lg shadow-inner mb-6">
+            <h2 class="text-2xl font-bold text-gray-700 mb-4">Convert Average Score to CGPA</h2>
+            <p class="text-gray-600 mb-4">Enter your average score (out of 30).</p>
+
+            <input
+                type="number"
+                id="avgScoreInput"
+                placeholder="Average Score (out of 30)"
+                step="0.01"
+                min="0"
+                max="30.5"
+                class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300 text-base mb-4"
+                aria-label="Enter average score"
+            >
+
+            <button id="convertAvgToCgpaBtn" class="w-full bg-indigo-700 text-white py-3 px-6 rounded-lg shadow-md hover:bg-indigo-800 focus:outline-none focus:ring-4 focus:ring-indigo-300 font-bold text-lg uppercase tracking-wider transform hover:-translate-y-0.5 transition-all duration-200">
+                🔄 Convert
+            </button>
+
+            <div id="convertedCgpaResult" class="mt-6 p-4 bg-indigo-100 text-indigo-800 rounded-lg text-xl sm:text-2xl font-semibold hidden animate-fadeInScale">
+                <!-- Result will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Custom Message Box for errors/info -->
+        <div id="messageBox" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm w-full">
+                <p id="messageBoxText" class="text-xl font-semibold text-gray-800 mb-4"></p>
+                <button id="closeMessageBox" class="bg-indigo-600 text-white py-2 px-5 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Subject Data (Translated from C struct array) ---
+        const subjects = [
+            // Year 1
+            { name: "Calculus 1", credits: 6 }, { name: "Physics 1", credits: 6 }, { name: "Discrete Mathematics", credits: 6 },
+            { name: "Programming", credits: 9 }, { name: "Calculus 2", credits: 6 }, { name: "Physics 2", credits: 6 },
+            { name: "Mathematics for Data Analysis", credits: 6 }, { name: "Algorithm and Data Structure", credits: 9 },
+            // Year 2
+            { name: "Computer Networks", credits: 6 }, { name: "Database", credits: 12 }, { name: "Devices for AI", credits: 12 },
+            { name: "Object Oriented Programming", credits: 9 }, { name: "Operating System", credits: 12 }, { name: "Statistical Methods and Models", credits: 6 },
+            // Year 3
+            { name: "Artificial Intelligence", credits: 12 }, { name: "Final Dissertation", credits: 6 }, { name: "Software Engineering", credits: 6 },
+            { name: "System Security", credits: 6 }, { name: "Web Programming", credits: 9 },
+            // Optional subjects
+            { name: "Data Modeling", credits: 6 }, { name: "Wireless Sensor Networks", credits: 6 },
+            // Internship
+            { name: "Internship", credits: 4 }
+        ];
+
+        // Score to GPA mapping (Translated from C ScoreToGPA struct array)
+        const scoreToGPAMapping = [
+            { score: 30.0, gpa: 4.0 },
+            { score: 29.0, gpa: 3.9 },
+            { score: 28.0, gpa: 3.7 },
+            { score: 27.0, gpa: 3.3 },
+            { score: 26.0, gpa: 3.0 },
+            { score: 25.0, gpa: 2.7 },
+            { score: 24.0, gpa: 2.3 },
+            { score: 23.0, gpa: 2.0 },
+            { score: 22.0, gpa: 1.7 },
+            { score: 21.0, gpa: 1.3 },
+            { score: 20.0, gpa: 1.0 },
+            { score: 19.0, gpa: 0.7 },
+            { score: 18.0, gpa: 0.5 },
+            { score: 0.0, gpa: 0.0 } // fail below 18
+        ];
+
+        // --- DOM Element References ---
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        const subjectInputsContainer = document.getElementById('subjectInputsContainer');
+        const addSubjectRowBtn = document.getElementById('addSubjectRowBtn');
+        const calculateFromCoursesBtn = document.getElementById('calculateFromCoursesBtn');
+        const coursesCgpaResult = document.getElementById('coursesCgpaResult');
+
+        const avgScoreInput = document.getElementById('avgScoreInput');
+        const convertAvgToCgpaBtn = document.getElementById('convertAvgToCgpaBtn');
+        const convertedCgpaResult = document.getElementById('convertedCgpaResult');
+
+        const messageBox = document.getElementById('messageBox');
+        const messageBoxText = document.getElementById('messageBoxText');
+        const closeMessageBoxBtn = document.getElementById('closeMessageBox');
+
+        let subjectRowCounter = 0; // To ensure unique IDs for dynamically added rows
+
+        // --- Event Listeners ---
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => switchTab(button.id));
+        });
+
+        addSubjectRowBtn.addEventListener('click', addSubjectRow);
+        calculateFromCoursesBtn.addEventListener('click', calculateOverallCGPAFromCourses);
+
+        convertAvgToCgpaBtn.addEventListener('click', convertAverageScoreToCGPA);
+
+        closeMessageBoxBtn.addEventListener('click', () => messageBox.classList.add('hidden'));
+
+        // --- Initial Setup ---
+        // Show the first tab by default
+        switchTab('tab1Btn');
+        // Add a few initial subject rows for convenience
+        document.addEventListener('DOMContentLoaded', () => {
+            addSubjectRow();
+            addSubjectRow();
+        });
+
+
+        // --- Functions for UI Management ---
+
+        /**
+         * Switches between different calculation tabs.
+         * @param {string} activeTabId - The ID of the button for the tab to activate.
+         */
+        function switchTab(activeTabId) {
+            // Deactivate all buttons and hide all content
+            tabButtons.forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Activate the selected button and show its content
+            const activeBtn = document.getElementById(activeTabId);
+            activeBtn.classList.remove('bg-gray-200', 'text-gray-700');
+            activeBtn.classList.add('bg-indigo-600', 'text-white');
+
+            const contentId = activeTabId.replace('Btn', 'Content');
+            document.getElementById(contentId).classList.add('active');
+
+            // Hide all results when switching tabs
+            coursesCgpaResult.classList.add('hidden');
+            convertedCgpaResult.classList.add('hidden');
+        }
+
+        /**
+         * Displays a custom message box.
+         * @param {string} message - The message to display.
+         */
+        function displayMessageBox(message) {
+            messageBoxText.textContent = message;
+            messageBox.classList.remove('hidden');
+        }
+
+        // --- Core Calculation Logic (Translated from C) ---
+
+        /**
+         * Converts a numerical score (out of 30) to a GPA value based on the defined mapping.
+         * Includes linear interpolation for scores between defined points.
+         * @param {number} score - The score obtained (out of 30).
+         * @returns {number} The corresponding GPA.
+         */
+        function convertScoreToGPA(score) {
+            // Handle edge cases
+            if (score >= scoreToGPAMapping[0].score) { // Score 30 or above
+                return scoreToGPAMapping[0].gpa;
+            }
+
+            if (score < 18.0) { // Fail below 18
+                return 0.0;
+            }
+
+            // Iterate through the mapping to find the correct range for interpolation
+            for (let i = 0; i < scoreToGPAMapping.length - 1; i++) {
+                const lowerMapping = scoreToGPAMapping[i + 1]; // x0, y0
+                const upperMapping = scoreToGPAMapping[i];     // x1, y1
+
+                // Check if the score falls within this interval (e.g., [29, 30), [28, 29), etc.)
+                if (score >= lowerMapping.score && score < upperMapping.score) {
+                    const x0 = lowerMapping.score;
+                    const y0 = lowerMapping.gpa;
+                    const x1 = upperMapping.score;
+                    const y1 = upperMapping.gpa;
+
+                    // Perform linear interpolation
+                    // m = (y1 - y0) / (x1 - x0)
+                    // gpa = y0 + m * (score - x0)
+                    const m = (y1 - y0) / (x1 - x0);
+                    const gpa = y0 + m * (score - x0);
+                    return gpa;
+                }
+            }
+            return 0.0; // Should not be reached if logic is sound, but as a fallback
+        }
+
+
+        // --- Functions for Tab 1: Calculate Overall CGPA from Courses ---
+
+        /**
+         * Adds a new row for subject input (dropdown for subject choice and input for marks).
+         */
+        function addSubjectRow() {
+            subjectRowCounter++;
+            const rowId = `subjectRow-${subjectRowCounter}`;
+            const subjectRow = document.createElement('div');
+            subjectRow.id = rowId;
+            subjectRow.className = 'flex flex-col sm:flex-row gap-2 items-center bg-gray-100 p-3 rounded-lg shadow-sm';
+            subjectRow.innerHTML = `
+                <select
+                    id="subjectSelect-${subjectRowCounter}"
+                    class="w-full sm:w-2/3 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300 text-base bg-white"
+                    aria-label="Select subject"
+                >
+                    <option value="">-- Select Subject --</option>
+                    ${subjects.map((sub, index) => `<option value="${index}">${sub.name} (${sub.credits} CFU)</option>`).join('')}
+                </select>
+                <input
+                    type="number"
+                    id="marksInput-${subjectRowCounter}"
+                    placeholder="Marks (0-30.5)"
+                    step="0.01"
+                    min="0"
+                    max="30.5"
+                    class="w-full sm:w-1/3 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-300 text-base"
+                    aria-label="Enter marks for subject"
+                >
+                <button
+                    data-row-id="${rowId}"
+                    class="remove-subject-row-btn bg-red-500 text-white p-2 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 transition-colors duration-200 flex-shrink-0"
+                    aria-label="Remove subject row"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            `;
+            subjectInputsContainer.appendChild(subjectRow);
+
+            // Add event listener for the new remove button
+            subjectRow.querySelector('.remove-subject-row-btn').addEventListener('click', (event) => {
+                const idToRemove = event.currentTarget.dataset.rowId;
+                document.getElementById(idToRemove).remove();
+            });
+        }
+
+        /**
+         * Calculates the overall CGPA from selected courses and their marks.
+         * This function mirrors the C `calculate_average_score` function.
+         */
+        function calculateOverallCGPAFromCourses() {
+            let totalWeightedGPA = 0;
+            let totalWeightedScore = 0;
+            let totalCredits = 0;
+            let isValid = true;
+            const selectedSubjectsIndices = new Set(); // To prevent duplicate subject selection
+
+            const rows = subjectInputsContainer.querySelectorAll('.flex');
+
+            if (rows.length === 0) {
+                displayMessageBox('Please add at least one subject row to calculate.');
+                coursesCgpaResult.classList.add('hidden');
+                return;
+            }
+
+            rows.forEach(row => {
+                const subjectSelect = row.querySelector('select[id^="subjectSelect-"]');
+                const marksInput = row.querySelector('input[id^="marksInput-"]');
+
+                const selectedIndex = parseInt(subjectSelect.value);
+                const marks = parseFloat(marksInput.value);
+
+                // Reset validation styling
+                subjectSelect.classList.remove('border-red-500', 'ring-red-200');
+                marksInput.classList.remove('border-red-500', 'ring-red-200');
+
+                if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= subjects.length) {
+                    isValid = false;
+                    subjectSelect.classList.add('border-red-500', 'ring-red-200');
+                    return; // Skip this row but mark as invalid
+                }
+
+                if (selectedSubjectsIndices.has(selectedIndex)) {
+                    isValid = false;
+                    subjectSelect.classList.add('border-red-500', 'ring-red-200');
+                    displayMessageBox('Duplicate subject selected. Please select unique subjects.');
+                    return; // Skip this row and show error
+                }
+                selectedSubjectsIndices.add(selectedIndex);
+
+                if (isNaN(marks) || marks < 0 || marks > 30.5) {
+                    isValid = false;
+                    marksInput.classList.add('border-red-500', 'ring-red-200');
+                    return; // Skip this row but mark as invalid
+                }
+
+                const subject = subjects[selectedIndex];
+                const gpa = convertScoreToGPA(marks);
+                const credit = subject.credits;
+
+                totalWeightedGPA += gpa * credit;
+                totalWeightedScore += marks * credit;
+                totalCredits += credit;
+            });
+
+            if (!isValid) {
+                // If isValid is false due to duplicate subjects, message is already shown.
+                // Otherwise, show a generic validation message.
+                if (!messageBox.classList.contains('hidden') && messageBoxText.textContent.includes('Duplicate subject')) {
+                    // Do nothing, message already displayed
+                } else {
+                    displayMessageBox('Please ensure all subjects are selected and marks are valid (0-30.5).');
+                }
+                coursesCgpaResult.classList.add('hidden');
+                return;
+            }
+
+            if (totalCredits === 0) {
+                displayMessageBox('Total credits cannot be zero. Please select subjects with valid credits.');
+                coursesCgpaResult.classList.add('hidden');
+                return;
+            }
+
+            const avgScore = totalWeightedScore / totalCredits;
+            const overallCGPA = totalWeightedGPA / totalCredits;
+
+            coursesCgpaResult.innerHTML = `
+                <p>Total Credits Completed: <span class="font-bold">${totalCredits.toFixed(1)}</span></p>
+                <p>Average Score: <span class="font-bold">${avgScore.toFixed(2)}</span> / 30</p>
+                <p>Overall CGPA: <span class="font-bold">${overallCGPA.toFixed(2)}</span></p>
+            `;
+            coursesCgpaResult.classList.remove('hidden');
+            coursesCgpaResult.classList.add('animate-fadeInScale');
+        }
+
+        // --- Functions for Tab 2: Convert Average Score to CGPA ---
+
+        /**
+         * Converts a given average score to CGPA.
+         * This function mirrors the C `calculate_cgpa` function.
+         */
+        function convertAverageScoreToCGPA() {
+            const avgScore = parseFloat(avgScoreInput.value);
+
+            // Reset validation styling
+            avgScoreInput.classList.remove('border-red-500', 'ring-red-200');
+
+            if (isNaN(avgScore) || avgScore < 0 || avgScore > 30.5) {
+                displayMessageBox('Invalid input! Average score must be between 0 and 30.5.');
+                avgScoreInput.classList.add('border-red-500', 'ring-red-200');
+                convertedCgpaResult.classList.add('hidden');
+                return;
+            }
+
+            const cgpa = convertScoreToGPA(avgScore);
+            convertedCgpaResult.innerHTML = `
+                <p>Average Score: <span class="font-bold">${avgScore.toFixed(2)}</span> / 30</p>
+                <p>Overall CGPA: <span class="font-bold">${cgpa.toFixed(2)}</span></p>
+            `;
+            convertedCgpaResult.classList.remove('hidden');
+            convertedCgpaResult.classList.add('animate-fadeInScale');
+        }
+
+    </script>
+</body>
+</html>
